@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>洗車預約系統</title>
+    <style>
+        body {
+            font-family: Arial;
+            background-color: #f2f2f2;
+            text-align: center;
+        }
+
+        .container {
+            background: white;
+            width: 400px;
+            margin: 50px auto;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        input, button {
+            width: 90%;
+            padding: 8px;
+            margin: 8px 0;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        a {
+            display: block;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🚗 洗車預約</h2>
+
+    <form action="/book" method="POST">
+        <input type="text" name="name" placeholder="姓名" required>
+        <input type="text" name="phone" placeholder="電話" required>
+        <input type="date" name="date" required>
+        <input type="time" name="time" required>
+
+        <button type="submit">送出預約</button>
+    </form>
+
+    <a href="/admin">查看所有預約</a>
+</div>
+
+</body>
+</html>
