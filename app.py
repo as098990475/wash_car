@@ -5,7 +5,6 @@ from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
 
-# 從環境變數拿資料庫連線
 DATABASE_URL = os.environ.get("DATABASE_URL")
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN")
 
@@ -13,29 +12,6 @@ def get_conn():
     if not DATABASE_URL:
         raise RuntimeError("DATABASE_URL is not set")
     return psycopg2.connect(DATABASE_URL, sslmode="require")
-
-
-def init_db():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS bookings (
-            id SERIAL PRIMARY KEY,
-            name TEXT NOT NULL,
-            phone TEXT NOT NULL,
-            book_date TEXT NOT NULL,
-            book_time TEXT NOT NULL,
-            created_at TIMESTAMPTZ DEFAULT NOW()
-        )
-    """)
-    conn.commit()
-    cur.close()
-    conn.close()
-
-
-# ✅ Flask 3 正確初始化方式
-with app.app_context():
-    init_db()
 
 
 @app.route("/")
@@ -52,10 +28,15 @@ def book():
 
     conn = get_conn()
     cur = conn.cursor()
+
     cur.execute(
-        "INSERT INTO bookings (name, phone, book_date, book_time) VALUES (%s, %s, %s, %s)",
+        """
+        INSERT INTO bookings (name, phone, booking_date, booking_time)
+        VALUES (%s, %s, %s, %s)
+        """,
         (name, phone, date, time)
     )
+
     conn.commit()
     cur.close()
     conn.close()
@@ -63,7 +44,6 @@ def book():
     return redirect("/")
 
 
-# 管理頁
 @app.route("/admin")
 def admin():
     token = request.args.get("token", "")
@@ -81,4 +61,4 @@ def admin():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
