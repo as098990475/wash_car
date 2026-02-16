@@ -1,75 +1,79 @@
-from flask import Flask, render_template, request, redirect, session
-
-import sqlite3
+import os
+from flask import Flask, render_template, request, redirect, abort
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
-app.secret_key = "washcarsecret"
-ADMIN_PASSWORD = "1234"
 
+# 從環境變數拿資料庫連線（正式一定要用 env）
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# 初始化資料庫
+ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN")  # 你自訂的一串密碼/token
+
+def get_conn():
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL is not set")
+    return psycopg2.connect(DATABASE_URL, sslmode="require")
+
 def init_db():
-    conn = sqlite3.connect("database.db")
-    c = conn.cursor()
-    c.execute("""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS bookings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            phone TEXT,
-            date TEXT,
-            time TEXT
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            phone TEXT NOT NULL,
+            date TEXT NOT NULL,
+            time TEXT NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW()
         )
     """)
     conn.commit()
+    cur.close()
     conn.close()
 
+# Render 啟動時會跑一次
 init_db()
-
 
 @app.route("/")
 def index():
     return render_template("index.html")
 
-
 @app.route("/book", methods=["POST"])
 def book():
-    name = request.form["name"]
-    phone = request.form["phone"]
-    date = request.form["date"]
-    time = request.form["time"]
+    name = request.form["name"].strip()
+    phone = request.form["phone"].strip()
+    date = request.form["date"].strip()
+    time = request.form["time"].strip()
 
-    conn = sqlite3.connect("database.db")
-    c = conn.cursor()
-    c.execute("INSERT INTO bookings (name, phone, date, time) VALUES (?, ?, ?, ?)",
-              (name, phone, date, time))
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO bookings (name, phone, date, time) VALUES (%s, %s, %s, %s)",
+        (name, phone, date, time)
+    )
     conn.commit()
+    cur.close()
     conn.close()
 
-    return "預約成功！<br><a href='/'>回首頁</a>"
+    return redirect("/")
 
-
-
-@app.route("/admin", methods=["GET", "POST"])
+# ✅ 管理頁加鎖：要帶 token 才能看
+# 用法：https://你的網站/admin?token=你設定的ADMIN_TOKEN
+@app.route("/admin")
 def admin():
-    if request.method == "POST":
-        password = request.form["password"]
-        if password == ADMIN_PASSWORD:
-            session["admin"] = True
-            return redirect("/admin")
+    token = request.args.get("token", "")
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
+        abort(403)
 
-    if not session.get("admin"):
-        return render_template("login.html")
-
-    conn = sqlite3.connect("database.db")
-    c = conn.cursor()
-    c.execute("SELECT * FROM bookings")
-    bookings = c.fetchall()
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT * FROM bookings ORDER BY id DESC")
+    bookings = cur.fetchall()
+    cur.close()
     conn.close()
 
     return render_template("admin.html", bookings=bookings)
 
-
-
 if __name__ == "__main__":
-    app.run()
-
+    app.run(debug=True)
