@@ -49,7 +49,7 @@ def book():
     conn = get_conn()
     cur = conn.cursor()
     cur.execute(
-        "INSERT INTO bookings (name, phone, date, time) VALUES (%s, %s, %s, %s)",
+        "INSERT INTO bookings (name, phone, book_date, book_time) VALUES (%s, %s, %s, %s)",
         (name, phone, date, time)
     )
     conn.commit()
