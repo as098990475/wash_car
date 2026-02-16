@@ -26,39 +26,19 @@ def book():
     date = request.form["date"].strip()
     time = request.form["time"].strip()
 
-    conn = get_conn()
-    cur = conn.cursor()
-
-    cur.execute(
-        """
-        INSERT INTO bookings (name, phone, booking_date, booking_time)
-        VALUES (%s, %s, %s, %s)
-        """,
-        (name, phone, date, time)
-    )
-
-    conn.commit()
-    cur.close()
-    conn.close()
+    try:
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO bookings (name, phone, booking_date, booking_time) VALUES (%s, %s, %s, %s)",
+            (name, phone, date, time)
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print("DB ERROR:", e)
+        return "Database error", 500
 
     return redirect("/")
 
-
-@app.route("/admin")
-def admin():
-    token = request.args.get("token", "")
-    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
-        abort(403)
-
-    conn = get_conn()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT * FROM bookings ORDER BY id DESC")
-    bookings = cur.fetchall()
-    cur.close()
-    conn.close()
-
-    return render_template("admin.html", bookings=bookings)
-
-
-if __name__ == "__main__":
-    app.run()
