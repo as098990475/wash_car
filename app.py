@@ -47,7 +47,6 @@ def book():
 @app.route("/admin")
 def admin():
     token = request.args.get("token", "")
-
     if not ADMIN_TOKEN or token != ADMIN_TOKEN:
         abort(403)
 
@@ -63,6 +62,7 @@ def admin():
         return "Database error", 500
 
     return render_template("admin.html", bookings=bookings)
+
 
 
 if __name__ == "__main__":
