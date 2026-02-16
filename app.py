@@ -5,15 +5,15 @@ from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
 
-# 從環境變數拿資料庫連線（正式一定要用 env）
+# 從環境變數拿資料庫連線
 DATABASE_URL = os.environ.get("DATABASE_URL")
-
-ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN")  # 你自訂的一串密碼/token
+ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN")
 
 def get_conn():
     if not DATABASE_URL:
         raise RuntimeError("DATABASE_URL is not set")
     return psycopg2.connect(DATABASE_URL, sslmode="require")
+
 
 def init_db():
     conn = get_conn()
@@ -23,8 +23,8 @@ def init_db():
             id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
             phone TEXT NOT NULL,
-            date TEXT NOT NULL,
-            time TEXT NOT NULL,
+            book_date TEXT NOT NULL,
+            book_time TEXT NOT NULL,
             created_at TIMESTAMPTZ DEFAULT NOW()
         )
     """)
@@ -32,15 +32,16 @@ def init_db():
     cur.close()
     conn.close()
 
-# Render 啟動時會跑一次
-@app.before_first_request
-def setup():
+
+# ✅ Flask 3 正確初始化方式
+with app.app_context():
     init_db()
 
 
 @app.route("/")
 def index():
     return render_template("index.html")
+
 
 @app.route("/book", methods=["POST"])
 def book():
@@ -61,8 +62,8 @@ def book():
 
     return redirect("/")
 
-# ✅ 管理頁加鎖：要帶 token 才能看
-# 用法：https://你的網站/admin?token=你設定的ADMIN_TOKEN
+
+# 管理頁
 @app.route("/admin")
 def admin():
     token = request.args.get("token", "")
@@ -77,6 +78,7 @@ def admin():
     conn.close()
 
     return render_template("admin.html", bookings=bookings)
+
 
 if __name__ == "__main__":
     app.run(debug=True)
