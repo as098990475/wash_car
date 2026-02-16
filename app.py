@@ -33,7 +33,10 @@ def init_db():
     conn.close()
 
 # Render 啟動時會跑一次
-init_db()
+@app.before_first_request
+def setup():
+    init_db()
+
 
 @app.route("/")
 def index():
